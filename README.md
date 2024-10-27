@@ -24,8 +24,8 @@ Pulau Paradis dan Marley, sama-sama menghadapi ancaman besar dari satu sama lain
 |                  |                     | eth2          | 10.80.2.1	   | -               |
 |                  |                     | eth3          |10.80.3.1  | -               |
 |                  |                     | eth4          | 10.80.4.1    | -               |
-| **Tybur**        | DHCP Server         | eth0          | 10.80.4.2   | 10.80.4.1     |
-| **Fritz**        | DNS Server          | eth0          | 10.80.4.3    | 10.80.4.1     |
+| **Tybur**        | DHCP Server         | eth0          | 10.80.4.3   | 10.80.4.1     |
+| **Fritz**        | DNS Server          | eth0          | 10.80.4.2    | 10.80.4.1     |
 | **Warhammer**    | Database Server     | eth0          | 10.80.3.2    |10.80.3.1    |
 | **Beast**        | Load Balancer Laravel | eth0        | 	10.80.3.3   | 10.80.3.1     |
 | **Colossal**     | Load Balancer PHP   | eth0          | 10.80.3.4   |10.80.3.1     |
@@ -70,7 +70,7 @@ iface eth4 inet static
 ```bash
 auto eth0
 iface eth0 inet static
-    address 10.80.4.2
+    address 10.80.4.3
     netmask 255.255.255.0
     gateway 10.80.4.1
 ```
@@ -79,7 +79,7 @@ iface eth0 inet static
 ```bash
 auto eth0
 iface eth0 inet static
-    address 10.80.4.3
+    address 10.80.4.2
     netmask 255.255.255.0
     gateway 10.80.4.1
 ```
@@ -88,7 +88,7 @@ iface eth0 inet static
 ```bash
 auto eth0
 iface eth0 inet static
-    address 10.80.3.2
+    address 10.80.3.4
     netmask 255.255.255.0
     gateway 10.80.3.1
 ```
@@ -97,7 +97,7 @@ iface eth0 inet static
 ```bash
 auto eth0
 iface eth0 inet static
-    address 10.80.3.3
+    address 10.80.3.2
     netmask 255.255.255.0
     gateway 10.80.3.1
 ```
@@ -106,7 +106,7 @@ iface eth0 inet static
 ```bash
 auto eth0
 iface eth0 inet static
-    address 10.80.3.4
+    address 10.80.3.3
     netmask 255.255.255.0
     gateway 10.80.3.1
 ```
@@ -115,9 +115,9 @@ iface eth0 inet static
 ```bash
 auto eth0
 iface eth0 inet static
-    address 10.80.1.2
-    netmask 255.255.255.0
-    gateway 10.80.1.1
+	address 10.80.1.2
+	netmask 255.255.255.0
+	gateway 10.80.1.1
 ```
 
 ### **Bertholdt (Laravel Worker)**
@@ -184,59 +184,87 @@ hwaddress ether ba:89:d6:0f:57:f8
 ### Paradis (DHCP Relay)
 ```sh
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE -s 10.80.0.0/16
-echo nameserver 192.168.122.1 > /etc/resolv.conf
 apt-get update
-apt-get install isc-dhcp-relay -y
-service isc-dhcp-relay start
+apt install isc-dhcp-relay -y
 ```
 
 ### Fritz (DNS Server)
 ```sh
 echo 'nameserver 192.168.122.1' > /etc/resolv.conf
 apt-get update
-apt-get install bind9 -y  
+apt-get install bind9 -y
+
+echo 'options {
+        directory "/var/cache/bind";
+
+        forwarders {
+                192.168.122.1;
+        };
+
+        // dnssec-validation auto;
+        allow-query{any;};
+        auth-nxdomain no;
+        listen-on-v6 { any; };
+}; ' >/etc/bind/named.conf.options
+
+service bind9 restart
 ```
 
 ### Tybur (DHCP Server)
 ```sh
-echo 'nameserver 10.80.4.3' > /etc/resolv.conf   # DNS Server 
+echo 'nameserver 10.80.4.2' > /etc/resolv.conf
 apt-get update
-apt install isc-dhcp-server -y
+apt-get install isc-dhcp-server -y
 ```
 
 ### Warhammer (Database Server)
 ```sh
-echo 'nameserver 10.80.4.3' > /etc/resolv.conf   # DNS Server 
+echo 'nameserver 10.80.4.2' > /etc/resolv.conf
 apt-get update
 apt-get install mariadb-server -y
+
 service mysql start
 ```
 
 ### Laravel Worker
 ```sh
-echo 'nameserver 10.80.4.3' > /etc/resolv.conf   # DNS Server 
+echo 'nameserver 10.80.4.2' > /etc/resolv.conf
 apt-get update
+apt-get install lynx -y
 apt-get install mariadb-client -y
 ```
 ### PHP Worker
 ```sh
-echo 'nameserver 10.80.4.3' > /etc/resolv.conf   # DNS Server 
+echo 'nameserver 10.80.4.2' > /etc/resolv.conf
 apt-get update
+apt-get install lynx -y
+apt-get install wget -y
+apt-get install unzip -y
 apt-get install nginx -y
-apt-get install wget unzip -y
-apt-get install php-fpm php-common php-mysql php-gmp php-curl php-intl php-mbstring php-xmlrpc php-gd php-xml php-cli php-zip -y
+apt install software-properties-common -y
+apt install php7.3 -y
+apt install php7.3-fpm -y
 ```
 
 ### Load Balancer PHP
 ```sh
-echo 'nameserver 10.80.4.3' > /etc/resolv.conf   # DNS Server 
+echo 'nameserver 10.80.4.2' > /etc/resolv.conf
 apt-get update
+apt-get install bind9 -y
+apt-get install apache2-utils -y
 apt-get install nginx -y
+apt-get install lynx -y
+
+service nginx start
 ```
 
 ### Client
 ```
-apt-get update
+apt update
+apt install lynx -y
+apt install htop -y
+apt install apache2-utils -y
+apt-get install jq -y
 ```
 
 ## Soal 0
