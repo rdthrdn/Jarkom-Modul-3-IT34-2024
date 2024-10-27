@@ -224,7 +224,7 @@ echo 'nameserver 10.80.4.3' > /etc/resolv.conf   # DNS Server
 apt-get update
 apt-get install nginx -y
 apt-get install wget unzip -y
-apt-get install php7.3-fpm php7.3-common php7.3-mysql php7.3-gmp php7.3-curl php7.3-intl php7.3-mbstring php7.3-xmlrpc php7.3-gd php7.3-xml php7.3-cli php7.3-zip -y
+apt-get install php-fpm php-common php-mysql php-gmp php-curl php-intl php-mbstring php-xmlrpc php-gd php-xml php-cli php-zip -y
 ```
 
 ### Load Balancer PHP
@@ -607,4 +607,189 @@ echo 'options {
 };' > /etc/bind/named.conf.options
 
 service bind9 restart
+```
+
+## Soal 10
+Selanjutnya coba tambahkan keamanan dengan konfigurasi autentikasi di Colossal dengan dengan kombinasi username: “arminannie” dan password: “jrkmyyy”, dengan yyy merupakan kode kelompok. Terakhir simpan file “htpasswd” nya di /etc/nginx/supersecret/
+### Konfigurasi pada Colossal (Load Balancer PHP)
+```sh
+mkdir -p /etc/nginx/supersecret
+htpasswd -b -c /etc/nginx/supersecret/htpasswd arminannie jrkmit34
+
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/lb_php
+
+echo ' upstream worker {
+        #least_conn;
+        #ip_hash;
+    server 10.80.2.2;
+    server 10.80.2.3;
+    server 10.80.2.4;
+}
+
+server {
+    listen 80;
+    server_name eldia.it34.com www.eldia.it34.com;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html index.php;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://worker;
+    }
+
+    auth_basic "Restricted Content";
+    auth_basic_user_file /etc/nginx/supersecret/htpasswd;
+} ' > /etc/nginx/sites-available/lb_php
+
+ln -s /etc/nginx/sites-available/lb_php /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default
+
+service nginx restart
+```
+
+## Soal 11
+Lalu buat untuk setiap request yang mengandung /titan akan di proxy passing menuju halaman https://attackontitan.fandom.com/wiki/Attack_on_Titan_Wiki (11) 
+hint: (proxy_pass)
+### Konfigurasi pada Colossal (Load Balancer PHP)
+```sh
+mkdir -p /etc/nginx/supersecret
+htpasswd -b -c /etc/nginx/supersecret/htpasswd arminannie jrkmit34
+
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/lb_php
+
+echo ' upstream worker {
+        #least_conn;
+        #ip_hash;
+    server 10.80.2.2;
+    server 10.80.2.3;
+    server 10.80.2.4;
+}
+
+server {
+    listen 80;
+    server_name eldia.it34.com www.eldia.it34.com;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html index.php;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://worker;
+    }
+
+    location /titan {
+        proxy_pass http://attackontitan.fandom.com;
+        proxy_set_header Host attackontitan.fandom.com;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    auth_basic "Restricted Content";
+    auth_basic_user_file /etc/nginx/supersecret/htpasswd;
+} ' > /etc/nginx/sites-available/lb_php
+
+ln -s /etc/nginx/sites-available/lb_php /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default
+
+service nginx restart
+```
+
+## Soal 12
+Selanjutnya Colossal ini hanya boleh diakses oleh client dengan IP [Prefix IP].1.77, [Prefix IP].1.88, [Prefix IP].2.144, dan [Prefix IP].2.156. 
+hint: (fixed in dulu clientnya)
+### Konfigurasi pada Colossal (Load Balancer PHP)
+```sh
+mkdir -p /etc/nginx/supersecret
+htpasswd -b -c /etc/nginx/supersecret/htpasswd arminannie jrkmit34
+
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/lb_php
+
+echo ' upstream worker {
+        #least_conn;
+        #ip_hash;
+    server 10.80.2.2;
+    server 10.80.2.3;
+    server 10.80.2.4;
+}
+
+server {
+    listen 80;
+    server_name eldia.it34.com www.eldia.it34.com;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html index.php;
+
+    server_name _;
+
+    location / {
+        allow 10.80.1.77;
+        allow 10.80.1.88;
+        allow 10.80.2.144;
+        allow 10.80.2.156;
+        deny all;
+        proxy_pass http://worker;
+    }
+
+    location /titan {
+        proxy_pass http://attackontitan.fandom.com;
+        proxy_set_header Host attackontitan.fandom.com;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    auth_basic "Restricted Content";
+    auth_basic_user_file /etc/nginx/supersecret/htpasswd;
+} ' > /etc/nginx/sites-available/lb_php
+
+ln -s /etc/nginx/sites-available/lb_php /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default
+
+service nginx restart
+```
+
+## Soal 13
+Karena mengetahui bahwa ada keturunan marley yang mewarisi kekuatan titan, Zeke pun berinisiatif untuk menyimpan data data penting di Warhammer, dan semua data tersebut harus dapat diakses oleh anak buah kesayangannya, Annie, Reiner, dan Berthold.
+### Konfigurasi pada Warhammer (Database)
+```sh
+apt-get update
+apt-get install mariadb-server -y
+service mysql start
+
+echo '# This group is read both by the client and the server
+# use it for options that affect everything
+[client-server]
+
+# Import all .cnf files from configuration directory
+!includedir /etc/mysql/conf.d/
+!includedir /etc/mysql/mariadb.conf.d/
+
+# Options affecting the MySQL server (mysqld)
+[mysqld]
+skip-networking=0
+skip-bind-address
+' > /etc/mysql/my.cnf 
+
+sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf
+
+service mysql restart
+```
+### Jalankan di Database
+```sh
+mysql -u root -p
+Enter password: (kosong agar mudah)
+
+CREATE USER 'it34'@'%' IDENTIFIED BY 'it34';
+CREATE USER 'it34'@'localhost' IDENTIFIED BY 'it34';
+CREATE DATABASE db_it34;
+GRANT ALL PRIVILEGES ON *.* TO 'it34'@'%';
+GRANT ALL PRIVILEGES ON *.* TO 'it34'@'localhost';
+FLUSH PRIVILEGES;
 ```
