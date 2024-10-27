@@ -311,7 +311,7 @@ Yang diaplikasikan di konfigurasi pada bagian Topologi, Tabel IP, dan Konfiguras
 
 ## Soal 2
 Client yang melalui bangsa marley mendapatkan range IP dari [prefix IP].1.05 - [prefix IP].1.25 dan [prefix IP].1.50 - [prefix IP].1.100
-
+### Konfigurasi pada Tybur (DHCP Server)
 ```sh
 echo '
 subnet 10.80.1.0 netmask 255.255.255.0 {
