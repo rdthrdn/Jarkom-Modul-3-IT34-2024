@@ -417,11 +417,6 @@ service isc-dhcp-server restart
 
 Dikarenakan keluarga Tybur tidak menyukai kaum eldia, maka mereka hanya meminjamkan ip address ke kaum eldia selama 6 menit. Namun untuk kaum marley, keluarga Tybur meminjamkan ip address selama 30 menit. Waktu maksimal dialokasikan untuk peminjaman alamat IP selama 87 menit.
 
-Sedikit matematika diperlukan dalam menambahkan lease time pada setiap client yang terhubung:
-* `6 menit * 60 detik = 360 detik`
-* `30 menit * 60 detik = 1800 detik`
-* `87 menit * 60 detik = 5220 detik`
-  
 ### Konfigurasi pada Tybur (DHCP Server)
 ```sh
 echo '
