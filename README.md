@@ -241,7 +241,7 @@ apt-get update
 
 ## Soal 0
 
-> Pulau Paradis telah menjadi tempat yang damai selama 1000 tahun, namun kedamaian tersebut tidak bertahan selamanya. Perang antara kaum Marley dan Eldia telah mencapai puncak. Kaum Marley yang dipimpin oleh Zeke, me-register domain name **marley.yyy.com** untuk worker Laravel mengarah pada **Annie**. Namun ternyata tidak hanya kaum Marley saja yang berinisiasi, kaum Eldia ternyata sudah mendaftarkan domain name **eldia.yyy.com** untuk worker PHP (0) mengarah pada **Armin**.
+Pulau Paradis telah menjadi tempat yang damai selama 1000 tahun, namun kedamaian tersebut tidak bertahan selamanya. Perang antara kaum Marley dan Eldia telah mencapai puncak. Kaum Marley yang dipimpin oleh Zeke, me-register domain name **marley.yyy.com** untuk worker Laravel mengarah pada **Annie**. Namun ternyata tidak hanya kaum Marley saja yang berinisiasi, kaum Eldia ternyata sudah mendaftarkan domain name **eldia.yyy.com** untuk worker PHP (0) mengarah pada **Armin**.
 
 ### Konfigurasi pada Fritz (DNS Server)
 
@@ -270,9 +270,9 @@ $TTL    604800
                         2419200         ; Expire
                         604800 )       ; Negative Cache TTL
 ;
-@       IN      NS      marley.it24.com.
+@       IN      NS      marley.it34.com.
 @       IN      A       10.80.1.2    ; IP Annie
-www     IN      CNAME   marley.it24.com.' > /etc/bind/sites/marley.it34.com
+www     IN      CNAME   marley.it34.com.' > /etc/bind/sites/marley.it34.com
 
 echo ';
 ; BIND data file for local loopback interface
@@ -306,4 +306,305 @@ echo 'options {
 service bind9 restart
 ```
 
+## Soal 1
+Yang diaplikasikan di konfigurasi pada bagian Topologi, Tabel IP, dan Konfigurasi IP.
 
+## Soal 2
+Client yang melalui bangsa marley mendapatkan range IP dari [prefix IP].1.05 - [prefix IP].1.25 dan [prefix IP].1.50 - [prefix IP].1.100
+
+```sh
+echo '
+subnet 10.80.1.0 netmask 255.255.255.0 {
+range 10.80.1.5 10.80.1.25;
+range 10.80.1.50 10.80.1.100;
+}
+' > /etc/dhcp/dhcpd.conf
+
+service isc-dhcp-server restart
+```
+## Soal 3
+
+Client yang melalui bangsa eldia mendapatkan range IP dari [prefix IP].2.09 - [prefix IP].2.27 dan [prefix IP].2 .81 - [prefix IP].2.243
+
+### Konfigurasi pada Tybur (DHCP Server)
+
+```sh
+echo '
+subnet 10.80.1.0 netmask 255.255.255.0 {
+	range 10.80.1.5 10.80.1.25;
+	range 10.80.1.50 10.80.1.100;
+}
+
+subnet 10.80.2.0 netmask 255.255.255.0 {
+	range 10.80.2.09 10.80.2.27;
+	range 10.80.2.81 10.80.2.243;
+}
+' > /etc/dhcp/dhcpd.conf
+
+service isc-dhcp-server restart
+```
+
+## Soal 4
+
+Client mendapatkan DNS dari keluarga Fritz dan dapat terhubung dengan internet melalui DNS tersebut 
+
+### Konfigurasi pada Paradis (DHCP Relay)
+```sh
+echo '
+SERVERS="10.80.4.2"
+INTERFACES="eth1 eth2 eth3 eth4"
+OPTIONS=""
+' > /etc/default/isc-dhcp-relay
+
+echo '
+net.ipv4.ip_forward=1
+' > /etc/sysctl.conf
+
+service isc-dhcp-relay restart
+```
+
+### Konfigurasi pada Tybur (DHCP Server)
+```sh
+echo '
+SERVERS="10.80.4.2"
+INTERFACES="eth1 eth2 eth3 eth4"
+OPTIONS=""
+' > /etc/default/isc-dhcp-relay
+
+echo '
+net.ipv4.ip_forward=1
+' > /etc/sysctl.conf
+
+service isc-dhcp-relay restart
+```
+
+### Konfigurasi pada Tybur (DHCP Server)
+```sh
+echo '
+INTERFACESv4="eth0"
+INTERFACESv6=""
+' > /etc/default/isc-dhcp-server
+
+echo '
+subnet 10.80.1.0 netmask 255.255.255.0 {
+	range 10.80.1.05 10.80.1.25;
+	range 10.80.1.50 10.80.1.100;
+	option routers 10.80.1.1;
+	option broadcast-address 10.80.1.255;
+	option domain-name-servers 10.80.4.3;
+}
+
+subnet 10.80.2.0 netmask 255.255.255.0 {
+	range 10.80.2.09 10.80.2.27;
+	range 10.80.2.81 10.80.2.243;
+	option routers 10.80.2.1;
+	option broadcast-address 10.80.1.255;
+	option domain-name-servers 10.80.4.3;
+}
+
+subnet 10.80.3.0 netmask 255.255.255.0 {
+	option routers 10.80.3.1;
+}
+
+subnet 10.80.4.0 netmask 255.255.255.0 {
+	option routers 10.80.4.1;
+}
+' > /etc/dhcp/dhcpd.conf
+
+service isc-dhcp-server restart
+```
+## Soal 5
+
+Dikarenakan keluarga Tybur tidak menyukai kaum eldia, maka mereka hanya meminjamkan ip address ke kaum eldia selama 6 menit. Namun untuk kaum marley, keluarga Tybur meminjamkan ip address selama 30 menit. Waktu maksimal dialokasikan untuk peminjaman alamat IP selama 87 menit.
+
+Sedikit matematika diperlukan dalam menambahkan lease time pada setiap client yang terhubung:
+* `6 menit * 60 detik = 360 detik`
+* `30 menit * 60 detik = 1800 detik`
+* `87 menit * 60 detik = 5220 detik`
+  
+### Konfigurasi pada Tybur (DHCP Server)
+```sh
+echo '
+INTERFACESv4="eth0"
+INTERFACESv6=""
+' > /etc/default/isc-dhcp-server
+
+echo '
+subnet 10.80.1.0 netmask 255.255.255.0 {
+	range 10.80.1.5 10.80.1.25;
+	range 10.80.1.50 10.80.1.100;
+	option routers 10.80.1.1;
+	option broadcast-address 10.80.1.255;
+	option domain-name-servers 10.80.4.3;
+	default-lease-time 360;
+	max-lease-time 5220;
+}
+
+subnet 10.80.2.0 netmask 255.255.255.0 {
+	range 10.80.2.9 10.80.2.27;
+	range 10.80.2.81 10.80.2.243;
+	option routers 10.80.2.1;
+	option broadcast-address 10.80.1.255;
+	option domain-name-servers 10.80.4.3;
+	default-lease-time 1800;
+	max-lease-time 5220;
+}
+
+subnet 10.80.3.0 netmask 255.255.255.0 {
+	option routers 10.80.3.1;
+}
+
+subnet 10.80.4.0 netmask 255.255.255.0 {
+	option routers 10.80.4.1;
+}
+' > /etc/dhcp/dhcpd.conf
+
+service isc-dhcp-server restart
+```
+
+## Soal 6
+
+Armin berinisiasi untuk memerintahkan setiap worker PHP untuk melakukan konfigurasi virtual host untuk website berikut https://intip.in/BangsaEldia dengan menggunakan php 7.3 
+
+### Konfigurasi pada PHP Worker
+
+```sh
+service nginx start
+service php7.3-fpm start
+
+mkdir -p /var/www/eldia.it34.com
+
+wget --no-check-certificate 'https://drive.google.com/uc?export=download&id=1TvebIeMQjRjFURKVtA32lO9aL7U2msd6' -O /root/bangsaEldia.zip
+unzip -o /root/bangsaEldia.zip -d /var/www/eldia.it34.com
+
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/eldia.it34.com
+ln -s /etc/nginx/sites-available/eldia.it34.com /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default
+
+echo '
+server {
+  listen 80;
+  listen [::]:80;
+
+  root /var/www/eldia.it34.com;
+  index index.php index.html index.htm;
+
+  server_name eldia.it34.com;
+
+  location / {
+    try_files $uri $uri/ =404;
+  }
+
+  location ~ \.php$ {
+    include snippets/fastcgi-php.conf;
+    fastcgi_pass unix:/var/run/php/php7.3-fpm.sock;
+  }
+
+  location ~ /\.ht {
+    deny all;
+  }
+}' > /etc/nginx/sites-available/eldia.it34.com
+
+service nginx restart
+```
+## Soal 7
+
+Dikarenakan Armin sudah mendapatkan kekuatan titan colossal, maka bantulah kaum eldia menggunakan colossal agar dapat bekerja sama dengan baik. Kemudian lakukan testing dengan 6000 request dan 200 request/second. 
+
+### Konfigurasi pada Colossal (Load Balancer PHP)
+```sh
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/lb_php
+
+echo ' upstream worker {
+        #least_conn;
+        #ip_hash;
+    server 10.80.2.2;
+    server 10.80.2.3;
+    server 10.80.2.4;
+}
+
+server {
+    listen 80;
+    server_name eldia.it34.com www.eldia.it34.com;
+
+    root /var/www/html;
+
+    index index.html index.htm index.nginx-debian.html index.php;
+
+    server_name _;
+
+    location / {
+        proxy_pass http://worker;
+    }
+} ' > /etc/nginx/sites-available/lb_php
+
+ln -s /etc/nginx/sites-available/lb_php /etc/nginx/sites-enabled/
+rm /etc/nginx/sites-enabled/default
+
+service nginx restart
+```
+
+### Konfigurasi pada Fritz (DNS Server)
+
+Ubah untuk mengarahkan eldia.it34.com ke IP Colossal (Load Balancer PHP)
+
+```sh
+echo 'zone "marley.it34.com" {
+    type master;
+    file "/etc/bind/sites/marley.it34.com";
+};
+zone "eldia.it34.com" {
+    type master;
+    file "/etc/bind/sites/eldia.it34.com";
+};' > /etc/bind/named.conf.local
+
+mkdir -p /etc/bind/sites
+cp /etc/bind/db.local /etc/bind/sites/marley.it34.com
+cp /etc/bind/db.local /etc/bind/sites/eldia.it34.com
+
+echo ';
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     marley.it34.com. root.marley.it34.com. (
+                        2024102301      ; Serial
+                        604800         ; Refresh
+                        86400         ; Retry
+                        2419200         ; Expire
+                        604800 )       ; Negative Cache TTL
+;
+@       IN      NS      marley.it34.com.
+@       IN      A       10.80.1.2    ; IP Annie
+www     IN      CNAME   marley.it34.com.' > /etc/bind/sites/marley.it34.com
+
+echo ';
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     eldia.it34.com. root.eldia.it34.com. (
+                            2024102301         ; Serial
+                            604800              ; Refresh
+                            86400              ; Retry
+                            2419200              ; Expire
+                            604800 )            ; Negative Cache TTL
+;
+@       IN      NS      eldia.it34.com.
+@       IN      A       10.80.3.4    ; IP Colossal
+www     IN      CNAME   eldia.it34.com.' > /etc/bind/sites/eldia.it34.com
+
+echo 'options {
+    directory "/var/cache/bind";
+
+    forwarders {
+        192.168.122.1;
+    };
+
+    // dnssec-validation auto;
+
+    allow-query { any; };
+    auth-nxdomain no;    # conform to RFC1035
+    listen-on-v6 { any; };
+};' > /etc/bind/named.conf.options
+
+service bind9 restart
+```
